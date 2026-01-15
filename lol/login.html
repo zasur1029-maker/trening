@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Sign Up | Flickr Clone</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark-page">
+
+    <div class="auth-card anim-fade-in">
+        <div class="logo-area">
+            <span class="dot blue"></span>
+            <span class="dot pink"></span>
+            <span class="logo-text">flickr</span>
+        </div>
+
+        <div id="login-form">
+            <h3>Log in to Flickr</h3>
+            <form onsubmit="handleAuth(event, 'login')">
+                <input type="text" id="login-username" placeholder="Nickname" required>
+                <input type="password" id="login-pass" placeholder="Password" required>
+                <button type="submit" class="auth-btn" id="login-btn">Log In</button>
+            </form>
+            <p class="switch-text">Not a member? <a href="javascript:void(0)" onclick="switchForm()">Sign up here.</a></p>
+        </div>
+
+        <div id="signup-form" style="display: none;">
+            <h3>Sign up for Flickr</h3>
+            <form onsubmit="handleAuth(event, 'signup')">
+                <input type="text" id="signup-username" placeholder="Придумайте Nickname" required>
+                <input type="password" id="signup-pass" placeholder="Придумайте пароль" required>
+                <button type="submit" class="auth-btn btn-pink" id="signup-btn">Sign Up</button>
+            </form>
+            <p class="switch-text">Already a member? <a href="javascript:void(0)" onclick="switchForm()">Log in here.</a></p>
+        </div>
+    </div>
+
+    <script>
+        function switchForm() {
+            document.getElementById('login-form').style.display = document.getElementById('login-form').style.display === 'none' ? 'block' : 'none';
+            document.getElementById('signup-form').style.display = document.getElementById('signup-form').style.display === 'none' ? 'block' : 'none';
+        }
+
+        function handleAuth(event, type) {
+            event.preventDefault();
+
+            // Получаем список всех пользователей из памяти
+            let users = JSON.parse(localStorage.getItem('usersDatabase')) || [];
+
+            if (type === 'signup') {
+                const username = document.getElementById('signup-username').value;
+                const pass = document.getElementById('signup-pass').value;
+
+                // Проверка: не занято ли имя
+                const exists = users.find(u => u.username === username);
+                if (exists) {
+                    alert("Этот никнейм уже занят!");
+                    return;
+                }
+
+                // Сохраняем нового пользователя в базу
+                users.push({ username: username, password: pass, bio: "Новый пользователь" });
+                localStorage.setItem('usersDatabase', JSON.stringify(users));
+
+                alert("Регистрация успешна! Теперь войдите.");
+                switchForm(); // Переключаем на вход
+
+            } else {
+                const username = document.getElementById('login-username').value;
+                const pass = document.getElementById('login-pass').value;
+
+                // Ищем пользователя в базе
+                const user = users.find(u => u.username === username && u.password === pass);
+
+                if (user) {
+                    // ЕСЛИ НАШЛИ: сохраняем текущую сессию
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('userName', user.username);
+                    localStorage.setItem('userBio', user.bio);
+                    window.location.href = "index.html";
+                } else {
+                    // ЕСЛИ НЕ НАШЛИ
+                    alert("Ошибка: Неверный никнейм или пароль. Либо аккаунта не существует!");
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile | Flickr Clone</title>
+    <style>
+        body { background-color: #000 !important; color: #fff; font-family: sans-serif; margin: 0; }
+
+        /* Шапка с кнопкой домой */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: #121212;
+            border-bottom: 1px solid #262626;
+        }
+        .logo-link { color: #fff; text-decoration: none; font-size: 24px; font-weight: bold; letter-spacing: -1px; }
+        .logo-link span { color: #ff0084; } /* Розовая точка как у flickr */
+
+        .home-btn {
+            background: #363636;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .home-btn:hover { background: #454545; }
+
+        .profile-wrapper { max-width: 935px; margin: 0 auto; padding: 30px 20px; }
+
+        .profile-header { display: flex; align-items: center; margin-bottom: 44px; padding: 0 20px; }
+        .avatar-container { flex: 1; display: flex; justify-content: center; }
+        .avatar-wrapper { position: relative; cursor: pointer; }
+        .avatar-main { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 2px solid #262626; }
+
+        .avatar-add-icon {
+            position: absolute; bottom: 8px; right: 8px;
+            background: #0095f6; color: white; width: 28px; height: 28px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; border: 3px solid #000; font-weight: bold;
+        }
+
+        .user-info { flex: 2; }
+        .username-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; }
+        .username { font-size: 20px; font-weight: 300; }
+        .stats { display: flex; gap: 40px; list-style: none; padding: 0; margin-bottom: 20px; }
+
+        .btn-edit { background: #363636; color: #fff; border: none; padding: 7px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+        .add-content-area { text-align: center; margin-bottom: 40px; cursor: pointer; }
+        .add-circle {
+            width: 56px; height: 56px; border-radius: 50%; border: 1px solid #333;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 30px;
+        }
+        .add-text { display: block; font-size: 12px; margin-top: 8px; font-weight: bold; }
+
+        .profile-tabs { border-top: 1px solid #262626; display: flex; justify-content: center; gap: 60px; }
+        .tab { color: #8e8e8e; text-transform: uppercase; font-size: 12px; font-weight: 600; padding: 15px 0; }
+        .tab.active { color: #fff; border-top: 1px solid #fff; margin-top: -1px; }
+
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .photo-item { aspect-ratio: 1/1; overflow: hidden; background: #111; }
+        .photo-item img, .photo-item video { width: 100%; height: 100%; object-fit: cover; }
+
+        #file-input, #avatar-input { display: none; }
+    </style>
+</head>
+<body>
+
+<nav class="top-nav">
+    <a href="index.html" class="logo-link">flickr<span>.</span></a>
+    <a href="index.html" class="home-btn">🏠 На главную</a>
+</nav>
+
+<div class="profile-wrapper">
+    <header class="profile-header">
+        <div class="avatar-container">
+            <div class="avatar-wrapper" id="avatar-click-area">
+                <img src="https://www.w3schools.com/howto/img_avatar.png" class="avatar-main" id="profile-pic">
+                <div class="avatar-add-icon" id="avatar-plus">+</div>
+            </div>
+            <input type="file" id="avatar-input" accept="image/*" onchange="changeAvatar()">
+        </div>
+
+        <div class="user-info">
+            <div class="username-row">
+                <span class="username" id="display-username">загрузка...</span>
+                <button class="btn-edit" id="edit-btn" onclick="editProfile()">Редактировать</button>
+            </div>
+            <ul class="stats">
+                <li><b id="post-count">0</b> публикаций</li>
+                <li><b>0</b> подписчиков</li>
+                <li><b>2</b> подписок</li>
+            </ul>
+            <div class="user-bio"><b id="display-bio">Новый пользователь</b></div>
+        </div>
+    </header>
+
+    <div id="add-section" class="add-content-area" onclick="document.getElementById('file-input').click()">
+        <div class="add-circle">+</div>
+        <span class="add-text">Добавить</span>
+    </div>
+
+    <div class="profile-tabs">
+        <div class="tab active">Публикации</div>
+        <div class="tab">Сохраненное</div>
+        <div class="tab">Отметки</div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*,video/*" onchange="handleUpload()">
+    <div class="photo-grid" id="grid"></div>
+</div>
+
+<script>
+    let currentProfileTag = new URLSearchParams(window.location.search).get('user');
+    const myName = localStorage.getItem('userName');
+    if (!currentProfileTag) currentProfileTag = myName;
+
+    document.addEventListener('DOMContentLoaded', () => renderProfile(currentProfileTag));
+
+    function renderProfile(username) {
+        const isOwner = (username === myName);
+        const users = JSON.parse(localStorage.getItem('usersDatabase')) || [];
+        const user = users.find(u => u.username === username);
+
+        document.getElementById('display-username').innerText = username;
+        document.getElementById('display-bio').innerText = user ? user.bio : "dim";
+
+        const savedAvatar = localStorage.getItem('avatar_' + username);
+        if (savedAvatar) document.getElementById('profile-pic').src = savedAvatar;
+
+        // Показываем инструменты управления только владельцу
+        if (isOwner) {
+            document.getElementById('edit-btn').style.display = 'block';
+            document.getElementById('add-section').style.display = 'block';
+            document.getElementById('avatar-plus').style.display = 'flex';
+            document.getElementById('avatar-click-area').onclick = () => document.getElementById('avatar-input').click();
+        } else {
+            document.getElementById('edit-btn').style.display = 'none';
+            document.getElementById('add-section').style.display = 'none';
+            document.getElementById('avatar-plus').style.display = 'none';
+            document.getElementById('avatar-click-area').onclick = null;
+        }
+        loadUserContent(username);
+    }
+
+    function handleUpload() {
+        const file = document.getElementById('file-input').files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const item = { data: reader.result, type: file.type.startsWith('video') ? 'video' : 'image' };
+            let key = 'gallery_' + myName; // Привязка к нику
+            let items = JSON.parse(localStorage.getItem(key)) || [];
+            items.push(item);
+            localStorage.setItem(key, JSON.stringify(items));
+            location.reload();
+        }
+        if (file) reader.readAsDataURL(file);
+    }
+
+    function loadUserContent(username) {
+        let key = 'gallery_' + username;
+        let items = JSON.parse(localStorage.getItem(key)) || [];
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        items.reverse().forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'photo-item';
+            div.innerHTML = item.type === 'video' ? `<video src="${item.data}" autoplay loop muted></video>` : `<img src="${item.data}">`;
+            grid.appendChild(div);
+        });
+        document.getElementById('post-count').innerText = items.length;
+    }
+
+    function changeAvatar() {
+        const file = document.getElementById('avatar-input').files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            localStorage.setItem('avatar_' + myName, reader.result);
+            document.getElementById('profile-pic').src = reader.result;
+        }
+        if (file) reader.readAsDataURL(file);
+    }
+
+    function editProfile() {
+        const newBio = prompt("О себе:", document.getElementById('display-bio').innerText);
+        if (newBio !== null) {
+            let users = JSON.parse(localStorage.getItem('usersDatabase')) || [];
+            let idx = users.findIndex(u => u.username === myName);
+            if (idx !== -1) {
+                users[idx].bio = newBio;
+                localStorage.setItem('usersDatabase', JSON.stringify(users));
+            }
+            document.getElementById('display-bio').innerText = newBio;
+        }
+    }
+</script>
+</body>
+</html>

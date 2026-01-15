@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flickr Clone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background: #000000; /* ЧИСТО ЧЕРНЫЙ ФОН, КАК ТЫ ПРОСИЛ */
+            color: #fff;
+            font-family: sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* --- Общие стили --- */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #262626;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .burger-menu {
+            cursor: pointer; padding: 5px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .burger-menu div { width: 25px; height: 3px; background: #fff; border-radius: 2px; }
+        .logo { color: #fff; font-size: 24px; font-weight: bold; letter-spacing: -1px; text-decoration: none; }
+        .logo:after { content: '.'; color: #ff0084; }
+
+        /* --- Поиск --- */
+        .search-container { position: relative; flex-grow: 1; max-width: 400px; margin: 0 20px; }
+        #main-search {
+            width: 100%; padding: 10px 15px; border-radius: 8px; border: none;
+            font-size: 14px; background: #363636; color: white; outline: none;
+        }
+        .search-results {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #262626; border-radius: 0 0 8px 8px;
+            display: none; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            max-height: 250px; overflow-y: auto;
+        }
+        .result-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px;
+            cursor: pointer; border-bottom: 1px solid #333; color: white; text-align: left;
+        }
+        .result-item:hover { background: #333; }
+        .result-item img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+
+        /* --- Кнопки авторизации/профиля --- */
+        .auth-buttons { display: flex; align-items: center; gap: 15px; }
+        .auth-buttons a { text-decoration: none; color: #fff; font-weight: bold; }
+        .auth-buttons .signup-btn { background: #0063dc; padding: 8px 15px; border-radius: 8px; }
+        .auth-buttons button {
+            background: none; border: 1px solid #ff0084; color: white;
+            cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 10px;
+        }
+        .profile-link-container { display: flex; align-items: center; gap: 10px; }
+        .profile-link-container img { border: 2px solid #0063dc; }
+
+        /* --- Боковое меню --- */
+        .side-nav {
+            height: 100%; width: 0; position: fixed; z-index: 2000; top: 0; left: 0;
+            background-color: #111; overflow-x: hidden; transition: 0.5s; padding-top: 60px;
+        }
+        .side-nav a { padding: 8px 8px 8px 32px; text-decoration: none; font-size: 20px; color: #818181; display: block; }
+
+        /* --- Лента Discovery --- */
+        .discovery-feed {
+            max-width: 600px;
+            margin: 30px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .post-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #262626;
+        }
+        .post-header { display: flex; align-items: center; padding: 15px; gap: 10px; }
+        .post-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ff0084; }
+        .post-username { font-weight: bold; color: #fff; text-decoration: none; }
+
+        /* ИСПРАВЛЕННЫЙ РАЗМЕР КАРТИНОК */
+        .post-media {
+            width: 100%;
+            height: auto; /* Картинка сама подстраивается под свой размер (1:1, 16:9 и т.д.) */
+            display: block;
+            object-fit: contain; /* Не обрезает края */
+        }
+
+        .post-actions { padding: 10px 15px; display: flex; gap: 15px; }
+        .post-actions button { background: none; border: none; color: #8e8e8e; font-size: 20px; cursor: pointer; }
+        .post-caption { padding: 0 15px 15px 15px; font-size: 14px; color: #ccc; }
+
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #888; }
+        .footer nav a { color: #888; text-decoration: none; margin: 0 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="side-menu" class="side-nav">
+        <a href="javascript:void(0)" class="close-btn" onclick="toggleMenu()">&times;</a>
+        <div class="menu-content">
+            <h3 style="color: #fff; padding-left: 32px;">Browse</h3>
+            <a href="#">Photos</a>
+            <a href="#">Albums</a>
+        </div>
+    </div>
+
+    <header class="navbar">
+        <div class="nav-left">
+            <div class="burger-menu" onclick="toggleMenu()">
+                <div></div><div></div><div></div>
+            </div>
+            <a href="index.html" class="logo">flickr</a>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="main-search" placeholder="🔍 Photos, people, or groups" oninput="liveSearch()" autocomplete="off">
+            <div id="search-results" class="search-results"></div>
+        </div>
+
+        <div class="auth-buttons" id="auth-section">
+            <a href="login.html">Log In</a>
+            <a href="login.html" class="signup-btn">Sign Up</a>
+        </div>
+    </header>
+
+    <main class="discovery-feed" id="discovery-feed"></main>
+
+    <footer class="footer">
+        <nav>
+            <a href="#">About</a> <a href="#">Jobs</a> <a href="#">Blog</a>
+            <a href="#">Privacy</a> <a href="#">Terms</a>
+        </nav>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script>
+        const placeholderPhotos = [
+            { user: 'NatureLover', avatar: 'https://cdn.pixabay.com/photo/2017/08/30/01/05/girl-2694769_960_720.jpg', media: 'https://cdn.pixabay.com/photo/2017/02/01/22/02/mountain-landscape-2031539_960_720.jpg', caption: 'Красота горного пейзажа.' },
+            { user: 'Space', avatar: 'https://cdn.pixabay.com/photo/2017/02/01/16/09/chicago-2031170_960_720.jpg', media: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa', caption: 'Бесконечный космос.' }
+        ];
+
+        function loadDiscoveryFeed() {
+            const feed = document.getElementById('discovery-feed');
+            feed.innerHTML = '';
+            let allUserPosts = [];
+            const users = JSON.parse(localStorage.getItem('usersDatabase')) || [];
+
+            users.forEach(user => {
+                const userPosts = JSON.parse(localStorage.getItem('gallery_' + user.username)) || [];
+                const userAvatar = localStorage.getItem('avatar_' + user.username) || 'https://www.w3schools.com/howto/img_avatar.png';
+                userPosts.forEach(post => {
+                    allUserPosts.push({
+                        username: user.username,
+                        avatar: userAvatar,
+                        media: post.data,
+                        type: post.type,
+                        caption: 'Моя новая работа!'
+                    });
+                });
+            });
+
+            if (allUserPosts.length < 2) allUserPosts = allUserPosts.concat(placeholderPhotos);
+            allUserPosts.sort(() => Math.random() - 0.5);
+
+            allUserPosts.forEach(post => {
+                const postCard = document.createElement('div');
+                postCard.className = 'post-card';
+                let mediaElement = post.type && post.type.startsWith('video')
+                    ? `<video class="post-media" src="${post.media}" controls autoplay loop muted></video>`
+                    : `<img class="post-media" src="${post.media}">`;
+
+                postCard.innerHTML = `
+                    <div class="post-header">
+                        <img src="${post.avatar}" class="post-avatar">
+                        <a href="profile.html?user=${post.username}" class="post-username">${post.username}</a>
+                    </div>
+                    ${mediaElement}
+                    <div class="post-actions"><button>❤️</button><button>💬</button></div>
+                    <div class="post-caption"><b>${post.username}</b> ${post.caption}</div>
+                `;
+                feed.appendChild(postCard);
+            });
+        }
+
+        function liveSearch() {
+            const query = document.getElementById('main-search').value.toLowerCase();
+            const resultsBox = document.getElementById('search-results');
+            const users = JSON.parse(localStorage.getItem('usersDatabase')) || [];
+            if (!query) { resultsBox.style.display = 'none'; return; }
+            const matches = users.filter(u => u.username.toLowerCase().includes(query));
+            if (matches.length > 0) {
+                resultsBox.innerHTML = matches.map(user => `<div class="result-item" onclick="window.location.href='profile.html?user=${user.username}'"><span>${user.username}</span></div>`).join('');
+                resultsBox.style.display = 'block';
+            } else { resultsBox.style.display = 'none'; }
+        }
+
+        function checkLoginState() {
+            const myName = localStorage.getItem('userName');
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                const avatar = localStorage.getItem('avatar_' + myName) || 'https://www.w3schools.com/howto/img_avatar.png';
+                document.getElementById('auth-section').innerHTML = `
+                    <div class="profile-link-container">
+                        <a href="profile.html" style="text-decoration:none; color:white; display:flex; align-items:center; gap:10px;">
+                            <img src="${avatar}" style="width:35px; height:35px; border-radius:50%; object-fit:cover;">
+                            <span>Profile</span>
+                        </a>
+                        <button onclick="logout()">EXIT</button>
+                    </div>`;
+            }
+        }
+
+        function logout() { localStorage.clear(); window.location.reload(); }
+        function toggleMenu() {
+            const m = document.getElementById('side-menu');
+            m.style.width = m.style.width === '250px' ? '0' : '250px';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginState();
+            loadDiscoveryFeed();
+        });
+    </script>
+</body>
+</html>
